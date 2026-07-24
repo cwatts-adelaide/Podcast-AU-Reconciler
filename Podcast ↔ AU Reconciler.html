@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<!-- saved from url=(0045)file:///Users/chriswatts/Downloads/index.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Podcast ↔ AU Reconciler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="./Podcast ↔ AU Reconciler_files/css2" rel="stylesheet">
+<script src="./Podcast ↔ AU Reconciler_files/papaparse.min.js"></script>
+<style>
+  :root{
+    --bg: #F4F5F7;
+    --panel: #FFFFFF;
+    --ink: #14181F;
+    --ink-2: #40454E;
+    --muted: #767C87;
+    --line: #E1E4E9;
+    --accent: #1E6F63;
+    --accent-soft: #E4F1EE;
+    --warn: #B4740E;
+    --warn-soft: #FBF0DD;
+    --crit: #A8362A;
+    --crit-soft: #FAE7E4;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  header.top{
+    background:var(--ink); color:#EEF0F3; padding:28px 32px;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  header.top .brand{ display:flex; align-items:baseline; gap:12px; }
+  header.top h1{ font-size:19px; margin:0; font-weight:600; letter-spacing:0.01em; }
+  header.top .keymark{ font-family:var(--mono); font-size:12px; color:#8FE0CB; letter-spacing:0.03em; }
+  header.top p{ margin:4px 0 0; color:#9AA1AC; font-size:13px; max-width:640px; }
+  main{ max-width:1040px; margin:0 auto; padding:28px 24px 80px; }
+
+  .cards{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:720px){ .cards{ grid-template-columns:1fr; } }
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px; position:relative;
+  }
+  .card h3{ margin:0 0 4px; font-size:14px; font-weight:600; }
+  .card .hint{ color:var(--muted); font-size:12.5px; margin:0 0 14px; line-height:1.5; }
+  .drop{
+    border:1.5px dashed var(--line); border-radius:8px; padding:22px 14px; text-align:center;
+    cursor:pointer; transition:border-color .15s, background .15s; background:#FBFBFC;
+  }
+  .drop:hover, .drop.drag{ border-color:var(--accent); background:var(--accent-soft); }
+  .drop input{ display:none; }
+  .drop .filename{ font-family:var(--mono); font-size:12.5px; color:var(--accent); word-break:break-all; }
+  .drop .cta{ font-size:13px; color:var(--ink-2); }
+  .drop .cta b{ color:var(--accent); font-weight:600; }
+  .drop .rowcount{ font-size:11.5px; color:var(--muted); margin-top:4px; }
+
+  .runbar{ display:flex; align-items:center; gap:14px; margin:22px 0 6px; }
+  button.primary{
+    background:var(--accent); color:#fff; border:none; border-radius:8px; padding:12px 22px;
+    font-size:14px; font-weight:600; cursor:pointer; font-family:var(--sans);
+  }
+  button.primary:disabled{ background:#C6CBD2; cursor:not-allowed; }
+  button.primary:not(:disabled):hover{ background:#175A50; }
+  .runstatus{ font-size:13px; color:var(--muted); }
+  .runstatus.err{ color:var(--crit); }
+
+  .spinner{
+    width:14px; height:14px; border-radius:50%; border:2px solid #C6E3DC; border-top-color:var(--accent);
+    display:inline-block; vertical-align:middle; margin-right:8px; animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  #results{ margin-top:36px; }
+  .stats{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:26px; }
+  @media (max-width:900px){ .stats{ grid-template-columns:repeat(2,1fr); } }
+  .stat{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .stat .n{ font-family:var(--mono); font-size:22px; font-weight:600; }
+  .stat .l{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .stat.warn .n{ color:var(--warn); }
+  .stat.crit .n{ color:var(--crit); }
+  .stat.ok .n{ color:var(--accent); }
+
+  .diag{
+    background:var(--warn-soft); border:1px solid #EBD8AE; border-radius:10px; padding:18px 20px; margin-bottom:26px;
+  }
+  .diag h4{ margin:0 0 8px; font-size:13.5px; color:#7A560A; }
+  .diag p{ margin:0 0 12px; font-size:13px; color:#5C4306; line-height:1.55; }
+  .keydiff{ display:grid; grid-template-columns:1fr 1fr; gap:16px; font-family:var(--mono); font-size:12px; }
+  .keydiff .col h5{ font-family:var(--sans); font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#7A560A; margin:0 0 6px;}
+  .keydiff .col div{ background:#fff; border:1px solid #EBD8AE; border-radius:6px; padding:6px 9px; margin-bottom:6px; overflow-wrap:anywhere; }
+
+  .accordion{ border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:14px; background:var(--panel); }
+  .accordion summary{
+    list-style:none; cursor:pointer; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;
+    font-size:14px; font-weight:600;
+  }
+  .accordion summary::-webkit-details-marker{ display:none; }
+  .accordion summary .badge{
+    font-family:var(--mono); font-size:12px; font-weight:600; padding:3px 9px; border-radius:20px;
+    background:var(--accent-soft); color:var(--accent);
+  }
+  .accordion.hasissues summary .badge{ background:var(--warn-soft); color:var(--warn); }
+  .accordion.critical summary .badge{ background:var(--crit-soft); color:var(--crit); }
+  .accordion .body{ padding:0 20px 18px; border-top:1px solid var(--line); }
+  .accordion .note{ font-size:12.5px; color:var(--muted); margin:14px 0 12px; line-height:1.55; }
+  table.sample{ width:100%; border-collapse:collapse; font-size:12px; font-family:var(--mono); }
+  table.sample th{ text-align:left; color:var(--muted); font-weight:600; padding:6px 8px; border-bottom:1px solid var(--line); font-family:var(--sans); font-size:11px; text-transform:uppercase; letter-spacing:.03em;}
+  table.sample td{ padding:6px 8px; border-bottom:1px solid #EEF0F2; overflow-wrap:anywhere; }
+  table.sample tr:last-child td{ border-bottom:none; }
+  .tablewrap{ max-height:280px; overflow:auto; border:1px solid var(--line); border-radius:8px; }
+  .downloadrow{ margin-top:10px; }
+  .link-btn{
+    background:none; border:1px solid var(--line); color:var(--ink-2); font-size:12.5px; padding:7px 12px;
+    border-radius:6px; cursor:pointer; font-family:var(--sans);
+  }
+  .link-btn:hover{ border-color:var(--accent); color:var(--accent); }
+
+  .downloads{ display:flex; gap:12px; margin-top:26px; flex-wrap:wrap; }
+  button.dl{
+    background:var(--ink); color:#fff; border:none; border-radius:8px; padding:13px 20px;
+    font-size:13.5px; font-weight:600; cursor:pointer; font-family:var(--sans);
+  }
+  button.dl.secondary{ background:#fff; color:var(--ink); border:1px solid var(--line); }
+  button.dl:hover{ opacity:.88; }
+
+  .empty-note{ color:var(--muted); font-size:13px; }
+
+  .procref{ background:var(--panel); border:1px solid var(--line); border-radius:10px; margin-bottom:22px; overflow:hidden; }
+  .procref summary{
+    list-style:none; cursor:pointer; padding:14px 20px; font-size:13.5px; font-weight:600;
+    display:flex; align-items:center; justify-content:space-between; color:var(--ink-2);
+  }
+  .procref summary::-webkit-details-marker{ display:none; }
+  .procref[open] summary::after{ content:'click to collapse'; font-size:11px; font-weight:400; color:var(--muted); }
+  .procref:not([open]) summary::after{ content:'click to expand'; font-size:11px; font-weight:400; color:var(--muted); }
+  .procref .body{ padding:2px 20px 18px; border-top:1px solid var(--line); display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; }
+  @media (max-width:820px){ .procref .body{ grid-template-columns:1fr; } }
+  .procref .step h4{ font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); margin:16px 0 8px; }
+  .procref .step ol, .procref .step ul{ margin:0; padding-left:18px; font-size:13px; line-height:1.6; color:var(--ink-2); }
+  .procref .step li{ margin-bottom:4px; }
+  .procref .step a{ color:var(--accent); text-decoration:none; }
+  .procref .step a:hover{ text-decoration:underline; }
+  .procref .step code{ background:#F1F2F4; border-radius:4px; padding:1px 5px; font-family:var(--mono); font-size:12px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <h1>Podcast ↔ AU Reconciler</h1>
+    <span class="keymark">mapping_key join</span>
+  </div>
+  <p>Joins a raw podcast delivery export against an AU-model export, rebuilds the S3 upload schema, and spot-checks the join before you ship it.</p>
+</header>
+
+<main>
+  <details class="procref" open="">
+    <summary><span>Where this tool fits in the process</span></summary>
+    <div class="body">
+      <div class="step">
+        <h4>Before this tool</h4>
+        <ol>
+          <li>Reformat the client file and upload it as <code>[friendly name]+manual+[campaign id]+[date YYYYMMDD].csv</code> to <a href="https://us-east-1.console.aws.amazon.com/s3/buckets/adelaide-fs-audio?region=us-east-1&amp;bucketType=general&amp;prefix=podcast/external_podcast_reporting/&amp;showversions=false" target="_blank" rel="noopener">adelaide-fs-audio</a></li>
+          <li>Wait for the success notification in <a href="https://adelaide-metrics.slack.com/archives/C057VENT610" target="_blank" rel="noopener">#audio notifications</a></li>
+          <li>Pull the AU data from the <a href="https://parsec.looker.com/x/MpBwEZ2P9bLTizobnyzKtJ" target="_blank" rel="noopener">Looker explore</a></li>
+        </ol>
+      </div>
+      <div class="step">
+        <h4>Field reference</h4>
+        <ul>
+          <li><b>ad_type:</b> Host-read, Produced</li>
+          <li><b>pod_position:</b> Pre, Mid, Post</li>
+          <li>Both are matched case-insensitively, but the tool will flag anything outside this set under "Other risks"</li>
+          <li><code>placement_id</code> is required on every row</li>
+        </ul>
+      </div>
+      <div class="step">
+        <h4>After this tool</h4>
+        <ol>
+          <li>Download <code>output_schema.csv</code> below</li>
+          <li>Upload it to <a href="https://us-east-1.console.aws.amazon.com/s3/buckets/adelaide-fs-omnichannel?region=us-east-1&amp;bucketType=general&amp;prefix=domain_report%2F&amp;showversions=false&amp;tab=objects" target="_blank" rel="noopener">adelaide-fs-omnichannel / domain_report</a></li>
+        </ol>
+      </div>
+    </div>
+  </details>
+
+  <div class="cards">
+    <div class="card">
+      <h3>1. Raw delivery export</h3>
+      <p class="hint">The <code>podcast_external_file</code>-style export — one row per placement/show/date, with impressions.</p>
+      <label class="drop" id="drop-raw">
+        <input type="file" id="file-raw" accept=".csv">
+        <div class="cta">Drop CSV here or <b>browse</b></div>
+        <div class="filename" id="raw-filename"></div>
+        <div class="rowcount" id="raw-rowcount"></div>
+      </label>
+    </div>
+    <div class="card">
+      <h3>2. AU data export</h3>
+      <p class="hint">The <code>au_data</code>-style export — one row per <code>mapping_key</code>, carrying <code>avg_au</code> and <code>adelaide_campaign_id</code>.</p>
+      <label class="drop" id="drop-au">
+        <input type="file" id="file-au" accept=".csv">
+        <div class="cta">Drop CSV here or <b>browse</b></div>
+        <div class="filename" id="au-filename"></div>
+        <div class="rowcount" id="au-rowcount"></div>
+      </label>
+    </div>
+  </div>
+
+  <div class="runbar">
+    <button class="primary" id="run-btn" disabled="">Run reconciliation</button>
+    <span class="runstatus" id="run-status"></span>
+  </div>
+
+  <div id="results" style="display:none;"></div>
+</main>
+
+<script>
+// ---------- column contracts ----------
+const AU_COLS = {
+  key: 'mapping_key',
+  campaignId: 'External Podcast Reporting Adelaide Campaign ID',
+  avgAu: 'External Podcast Reporting Avg Au'
+};
+const OUTPUT_HEADERS = [
+  'deduplication_key','adelaide_data_source','destination_source','adelaide_campaign_id','adelaide_snippet_id',
+  'date','ext_insertion_order_id','ext_partner_id','ext_partner_name','ext_placement_id','ext_placement_name',
+  'ext_creative_id','ext_line_id','au_model_version','placement_type','ad_format','show','narrow_genre',
+  'tracked_impressions','loaded_impressions','au_measurable_impressions','total_au','avg_au',
+  'onscreen_impressions','onscreen_50p_impressions','coverage_value','clutter_value','x_position_value',
+  'tos_time_0_300cap','video_q4_count','cost','cpm','throttled_impressions','tpa_score'
+];
+
+let rawFile = null, auFile = null;
+let rawRows = null, auRows = null;
+
+// ---------- upload wiring ----------
+function wireDrop(dropId, inputId, nameId, countId, onLoaded){
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  ['dragover','dragenter'].forEach(evt => drop.addEventListener(evt, e => { e.preventDefault(); drop.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(evt => drop.addEventListener(evt, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+  drop.addEventListener('drop', e => {
+    if (e.dataTransfer.files.length){ input.files = e.dataTransfer.files; handleFile(); }
+  });
+  input.addEventListener('change', handleFile);
+  function handleFile(){
+    const f = input.files[0];
+    if (!f) return;
+    document.getElementById(nameId).textContent = f.name;
+    document.getElementById(countId).textContent = 'Parsing…';
+    Papa.parse(f, {
+      skipEmptyLines: true,
+      complete: res => {
+        const table = res.data;
+        document.getElementById(countId).textContent = table.length.toLocaleString() + ' rows read';
+        onLoaded(table);
+        checkReady();
+      },
+      error: err => {
+        document.getElementById(countId).textContent = 'Could not read file: ' + err.message;
+      }
+    });
+  }
+}
+
+function findHeaderRow(table, mustInclude){
+  const limit = Math.min(table.length, 15);
+  for (let i = 0; i < limit; i++){
+    const row = table[i].map(c => (c || '').toString().trim());
+    if (mustInclude.every(name => row.includes(name))) return i;
+  }
+  return -1;
+}
+
+function tableToObjects(table, headerRowIdx){
+  const headers = table[headerRowIdx].map(h => (h || '').toString().trim());
+  const out = [];
+  for (let i = headerRowIdx + 1; i < table.length; i++){
+    const r = table[i];
+    if (!r || r.every(c => c === '' || c === null || c === undefined)) continue;
+    const obj = {};
+    headers.forEach((h, idx) => obj[h] = r[idx] !== undefined ? r[idx] : '');
+    out.push(obj);
+  }
+  return { headers, rows: out };
+}
+
+wireDrop('drop-raw','file-raw','raw-filename','raw-rowcount', table => {
+  const hdrIdx = findHeaderRow(table, ['Date','placement_id']);
+  if (hdrIdx === -1){
+    document.getElementById('raw-rowcount').textContent = 'Could not find a header row with Date + placement_id';
+    rawRows = null; rawFile = null;
+    return;
+  }
+  const { rows } = tableToObjects(table, hdrIdx);
+  rawRows = rows;
+  rawFile = true;
+});
+
+wireDrop('drop-au','file-au','au-filename','au-rowcount', table => {
+  const hdrIdx = findHeaderRow(table, ['mapping_key']);
+  if (hdrIdx === -1){
+    document.getElementById('au-rowcount').textContent = 'Could not find a header row with mapping_key';
+    auRows = null; auFile = null;
+    return;
+  }
+  const { rows } = tableToObjects(table, hdrIdx);
+  auRows = rows;
+  auFile = true;
+});
+
+function checkReady(){
+  document.getElementById('run-btn').disabled = !(rawRows && auRows);
+}
+
+// ---------- date helpers ----------
+const EXCEL_EPOCH = Date.UTC(1899, 11, 30);
+function parseDateToUTCMillis(str){
+  if (str === null || str === undefined || str === '') return null;
+  str = String(str).trim();
+  let m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return Date.UTC(+m[1], +m[2]-1, +m[3]);
+  m = str.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+  if (m) return Date.UTC(+m[1], +m[2]-1, +m[3]);
+  m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return Date.UTC(+m[3], +m[1]-1, +m[2]);
+  // MM/DD/YY (2-digit year) — the SOP's documented upload format
+  m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (m) return Date.UTC(2000 + (+m[3]), +m[1]-1, +m[2]);
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return null;
+}
+function excelSerial(utcMillis){
+  if (utcMillis === null) return null;
+  return Math.round((utcMillis - EXCEL_EPOCH) / 86400000);
+}
+function isoDate(utcMillis){
+  if (utcMillis === null) return '';
+  return new Date(utcMillis).toISOString().slice(0,10);
+}
+function csvEscape(v){
+  if (v === null || v === undefined) v = '';
+  v = String(v);
+  if (/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+  return v;
+}
+function toCSV(headers, rows){
+  const lines = [headers.join(',')];
+  for (const row of rows){
+    lines.push(headers.map(h => csvEscape(row[h])).join(','));
+  }
+  return lines.join('\n');
+}
+function downloadCSV(filename, headers, rows){
+  const csv = toCSV(headers, rows);
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- core reconciliation ----------
+function runReconciliation(){
+  const statusEl = document.getElementById('run-status');
+  statusEl.className = 'runstatus';
+  statusEl.innerHTML = '<span class="spinner"></span>Reconciling…';
+  document.getElementById('run-btn').disabled = true;
+
+  setTimeout(() => {
+    try {
+      const result = reconcile(rawRows, auRows);
+      renderResults(result);
+      statusEl.textContent = 'Done — ' + rawRows.length.toLocaleString() + ' raw rows processed.';
+    } catch (err){
+      statusEl.className = 'runstatus err';
+      statusEl.textContent = 'Error: ' + err.message;
+      console.error(err);
+    } finally {
+      document.getElementById('run-btn').disabled = false;
+    }
+  }, 30);
+}
+
+function reconcile(raw, au){
+  // 1. index au_data by mapping_key (case-insensitive, matching Excel's default XLOOKUP behavior —
+  // pod_position casing in particular is an open question in the current manual process)
+  const auMap = new Map();
+  const auSampleKeysOriginal = [];
+  for (const r of au){
+    const keyOriginal = (r[AU_COLS.key] || '').toString().trim();
+    if (!keyOriginal) continue;
+    if (auSampleKeysOriginal.length < 3) auSampleKeysOriginal.push(keyOriginal);
+    auMap.set(keyOriginal.toLowerCase(), {
+      campaignId: (r[AU_COLS.campaignId] || '').toString().trim(),
+      avgAu: parseFloat(r[AU_COLS.avgAu]),
+      matched: false,
+      originalKey: keyOriginal,
+      raw: r
+    });
+  }
+
+  const unmatched = [];      // raw rows with no au_data match
+  const missingFields = [];  // raw rows missing required dimensions
+  const zeroImpression = []; // raw rows with 0/blank impressions
+  const nonStandardValues = []; // ad_type / pod_position values outside the documented set
+  const sampleKeys = [];     // for diagnostic panel
+  const groups = new Map();  // aggregation
+
+  let totalRawImpressions = 0;
+  let matchedCount = 0;
+
+  const VALID_AD_TYPES = ['host-read', 'produced'];
+  const VALID_POD_POSITIONS = ['pre', 'mid', 'post'];
+
+  raw.forEach((row, idx) => {
+    const dateStr = row['Date'];
+    const millis = parseDateToUTCMillis(dateStr);
+    const serial = excelSerial(millis);
+    const placementId = (row['placement_id'] || '').toString().trim();
+    const placementName = (row['placement_name'] || '').toString().trim();
+    const publisher = (row['publisher'] || '').toString().trim();
+    const lineId = (row['line_id'] || '').toString().trim();
+    const lineItemName = (row['line_item_name'] || '').toString().trim();
+    const showName = (row['show_name'] || '').toString().trim();
+    const adType = (row['ad_type'] || '').toString().trim();
+    const podPosition = (row['pod_position'] || '').toString().trim();
+    const impressions = parseFloat(row['impressions']) || 0;
+    totalRawImpressions += impressions;
+
+    // missing required fields
+    const missing = [];
+    if (millis === null) missing.push('Date');
+    if (!placementId) missing.push('placement_id');
+    if (!showName) missing.push('show_name');
+    if (!adType) missing.push('ad_type');
+    if (!podPosition) missing.push('pod_position');
+    if (missing.length){
+      missingFields.push({ row: idx + 2, fields: missing.join(', '), placement_id: placementId, show_name: showName, date: dateStr || '' });
+    }
+    if (!impressions){
+      zeroImpression.push({ row: idx + 2, placement_id: placementId, show_name: showName, date: dateStr || '' });
+    }
+    if (adType && !VALID_AD_TYPES.includes(adType.toLowerCase())){
+      nonStandardValues.push({ row: idx + 2, field: 'ad_type', value: adType, placement_id: placementId, show_name: showName });
+    }
+    if (podPosition && !VALID_POD_POSITIONS.includes(podPosition.toLowerCase())){
+      nonStandardValues.push({ row: idx + 2, field: 'pod_position', value: podPosition, placement_id: placementId, show_name: showName });
+    }
+
+    const mappingKey = `${serial === null ? '' : serial}${placementId}${adType}${podPosition}${showName}`;
+    const match = auMap.get(mappingKey.toLowerCase());
+
+    if (sampleKeys.length < 3 && millis !== null && placementId) sampleKeys.push(mappingKey);
+
+    let avgAu = null, campaignId = '';
+    if (match){
+      match.matched = true;
+      matchedCount++;
+      avgAu = isNaN(match.avgAu) ? null : match.avgAu;
+      campaignId = match.campaignId;
+    } else {
+      if (missing.length === 0){ // only flag as a real join miss if the row had complete data to begin with
+        unmatched.push({ row: idx + 2, mapping_key: mappingKey, placement_id: placementId, show_name: showName, date: dateStr || '', ad_type: adType, pod_position: podPosition });
+      }
+    }
+
+    const totalAu = avgAu !== null ? impressions * avgAu : 0;
+
+    const groupKey = [serial, campaignId, publisher, placementId, placementName, lineId, lineItemName, showName, adType, podPosition].join('|');
+    if (!groups.has(groupKey)){
+      groups.set(groupKey, {
+        serial, campaignId, publisher, placementId, placementName, lineId, lineItemName, showName, adType, podPosition,
+        sumImpressions: 0, sumTotalAu: 0, anyMatched: false
+      });
+    }
+    const g = groups.get(groupKey);
+    g.sumImpressions += impressions;
+    if (avgAu !== null){ g.sumTotalAu += totalAu; g.anyMatched = true; }
+  });
+
+  // orphaned au_data rows (never matched by any raw row)
+  const orphanedAu = [];
+  for (const v of auMap.values()){
+    if (!v.matched) orphanedAu.push({ mapping_key: v.originalKey, adelaide_campaign_id: v.campaignId, avg_au: isNaN(v.avgAu) ? '' : v.avgAu });
+  }
+
+  // 2. build output rows + dedup key collision check
+  const outputRows = [];
+  const dedupIndex = new Map(); // dedupKey -> [group summaries]
+  const divideByZero = [];
+
+  for (const g of groups.values()){
+    const dedupKey = `${g.campaignId}${g.serial === null ? '' : g.serial}${g.placementId}`;
+    const auMeasurable = g.sumImpressions;
+    let avgAuAgg = '';
+    if (!g.anyMatched){
+      avgAuAgg = '';
+    } else if (auMeasurable > 0){
+      avgAuAgg = g.sumTotalAu / auMeasurable;
+    } else {
+      divideByZero.push({ dedup_key: dedupKey, placement_id: g.placementId, show: g.showName, ad_type: g.adType, pod_position: g.podPosition });
+    }
+
+    const outRow = {
+      deduplication_key: dedupKey,
+      adelaide_data_source: 'audio_pixels_podcast',
+      destination_source: 'manual',
+      adelaide_campaign_id: g.campaignId,
+      adelaide_snippet_id: '',
+      date: isoDate(g.serial !== null ? EXCEL_EPOCH + g.serial * 86400000 : null),
+      ext_insertion_order_id: '',
+      ext_partner_id: '',
+      ext_partner_name: '',
+      ext_placement_id: g.placementId,
+      ext_placement_name: g.placementName,
+      ext_creative_id: '',
+      ext_line_id: '',
+      au_model_version: 'v1.0.0',
+      placement_type: g.podPosition,
+      ad_format: g.adType,
+      show: g.showName,
+      narrow_genre: '',
+      tracked_impressions: g.sumImpressions,
+      loaded_impressions: g.sumImpressions,
+      au_measurable_impressions: g.sumImpressions,
+      total_au: g.sumTotalAu,
+      avg_au: avgAuAgg,
+      onscreen_impressions: '', onscreen_50p_impressions: '', coverage_value: '', clutter_value: '',
+      x_position_value: '', tos_time_0_300cap: '', video_q4_count: '', cost: '', cpm: '',
+      throttled_impressions: '', tpa_score: ''
+    };
+    outputRows.push(outRow);
+
+    if (!dedupIndex.has(dedupKey)) dedupIndex.set(dedupKey, []);
+    dedupIndex.get(dedupKey).push({ show: g.showName, ad_type: g.adType, pod_position: g.podPosition, impressions: g.sumImpressions });
+  }
+
+  const duplicateDedupKeys = [];
+  for (const [key, members] of dedupIndex.entries()){
+    if (members.length > 1){
+      duplicateDedupKeys.push({ dedup_key: key, collisions: members.length, detail: members.map(m => `${m.show} / ${m.ad_type} / ${m.pod_position}`).join('  |  ') });
+    }
+  }
+
+  const totalOutputImpressions = outputRows.reduce((s,r) => s + (r.tracked_impressions || 0), 0);
+
+  return {
+    rawCount: raw.length,
+    matchedCount,
+    unmatchedCount: unmatched.length,
+    unmatched,
+    missingFields,
+    zeroImpression,
+    nonStandardValues,
+    orphanedAu,
+    duplicateDedupKeys,
+    divideByZero,
+    outputRows,
+    sampleKeys,
+    auSampleKeys: auSampleKeysOriginal,
+    totalRawImpressions,
+    totalOutputImpressions
+  };
+}
+
+// ---------- rendering ----------
+function statTile(n, label, tone){
+  return `<div class="stat ${tone||''}"><div class="n">${n}</div><div class="l">${label}</div></div>`;
+}
+
+function sampleTable(rows, cols, limit){
+  limit = limit || 50;
+  const shown = rows.slice(0, limit);
+  let html = '<div class="tablewrap"><table class="sample"><thead><tr>' + cols.map(c => `<th>${c.label}</th>`).join('') + '</tr></thead><tbody>';
+  shown.forEach(r => {
+    html += '<tr>' + cols.map(c => `<td>${(r[c.key] ?? '')}</td>`).join('') + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  if (rows.length > limit){
+    html += `<div class="note">Showing first ${limit} of ${rows.length.toLocaleString()}.</div>`;
+  }
+  return html;
+}
+
+function renderResults(res){
+  const matchRate = res.rawCount ? (res.matchedCount / res.rawCount * 100) : 0;
+  const el = document.getElementById('results');
+  el.style.display = 'block';
+
+  let html = '';
+
+  html += '<div class="stats">';
+  html += statTile(res.rawCount.toLocaleString(), 'raw rows processed');
+  html += statTile(res.matchedCount.toLocaleString() + ' (' + matchRate.toFixed(1) + '%)', 'matched to au_data', matchRate > 90 ? 'ok' : (matchRate > 50 ? 'warn' : 'crit'));
+  html += statTile(res.unmatchedCount.toLocaleString(), 'unmatched mapping keys', res.unmatchedCount ? 'warn' : 'ok');
+  html += statTile(res.outputRows.length.toLocaleString(), 'aggregated output rows');
+  html += statTile(res.duplicateDedupKeys.length.toLocaleString(), 'colliding dedup keys', res.duplicateDedupKeys.length ? 'crit' : 'ok');
+  html += '</div>';
+
+  // diagnostic panel if match rate is poor
+  if (matchRate < 90 && res.rawCount > 0){
+    html += `<div class="diag">
+      <h4>Low match rate — check the key format before trusting this run</h4>
+      <p>Fewer than 90% of raw rows found a matching <code>mapping_key</code> in the AU data. The key is built as <code>Date + placement_id + ad_type + pod_position + show_name</code>, with the date converted to an Excel serial number. Here's what this run generated vs. what the AU file actually contains — if these look structurally different (different date format, extra spacing, different field order), that's almost certainly why rows aren't matching.</p>
+      <div class="keydiff">
+        <div class="col"><h5>Generated from raw file</h5>${res.sampleKeys.map(k => `<div>${k || '(empty)'}</div>`).join('')}</div>
+        <div class="col"><h5>Found in au_data</h5>${res.auSampleKeys.map(k => `<div>${k}</div>`).join('')}</div>
+      </div>
+    </div>`;
+  }
+
+  // impressions sanity
+  html += `<div class="empty-note" style="margin-bottom:22px;">Impressions check: ${res.totalRawImpressions.toLocaleString()} raw vs. ${res.totalOutputImpressions.toLocaleString()} in output — ${res.totalRawImpressions === res.totalOutputImpressions ? 'they match.' : 'these differ, which is expected only if some raw rows had blank required fields.'}</div>`;
+
+  // --- accordions ---
+  html += accordion(
+    'Unmatched mapping keys',
+    res.unmatched.length,
+    'Raw rows that could not be found in the AU data. These will ship with a blank adelaide_campaign_id and zero total_au unless fixed.',
+    res.unmatched.length ? sampleTable(res.unmatched, [
+      {key:'row', label:'row'}, {key:'date', label:'date'}, {key:'placement_id', label:'placement_id'},
+      {key:'show_name', label:'show_name'}, {key:'ad_type', label:'ad_type'}, {key:'pod_position', label:'pod_position'},
+      {key:'mapping_key', label:'mapping_key'}
+    ]) : '',
+    'unmatched-mapping-keys.csv',
+    res.unmatched,
+    ['row','date','placement_id','show_name','ad_type','pod_position','mapping_key']
+  );
+
+  html += accordion(
+    'Missing / blank required fields',
+    res.missingFields.length,
+    'Raw rows missing one of Date, placement_id, show_name, ad_type, or pod_position — these fall into "(blank)" buckets when aggregated, and are excluded from the unmatched-key check above since a key built from missing data isn\'t a meaningful miss.',
+    res.missingFields.length ? sampleTable(res.missingFields, [
+      {key:'row', label:'row'}, {key:'fields', label:'missing fields'}, {key:'placement_id', label:'placement_id'},
+      {key:'show_name', label:'show_name'}, {key:'date', label:'date'}
+    ]) : '',
+    'missing-fields.csv',
+    res.missingFields,
+    ['row','fields','placement_id','show_name','date']
+  );
+
+  html += accordion(
+    'Duplicate dedup_keys (S3 collisions)',
+    res.duplicateDedupKeys.length,
+    'The dedup_key formula is campaign_id + date + placement_id only — it does not include show, ad_type, or pod_position. When one placement covers more than one show or position on the same day (very common for podcast), those rows collide on the same key and can overwrite each other at the S3 destination. Each row below is one colliding key and the groups fighting over it.',
+    res.duplicateDedupKeys.length ? sampleTable(res.duplicateDedupKeys, [
+      {key:'dedup_key', label:'dedup_key'}, {key:'collisions', label:'# colliding rows'}, {key:'detail', label:'show / ad_type / pod_position'}
+    ]) : '',
+    'duplicate-dedup-keys.csv',
+    res.duplicateDedupKeys,
+    ['dedup_key','collisions','detail']
+  );
+
+  const otherCount = res.orphanedAu.length + res.divideByZero.length + res.zeroImpression.length + res.nonStandardValues.length;
+  let otherBody = '';
+  if (res.nonStandardValues.length){
+    otherBody += `<div class="note"><b>${res.nonStandardValues.length.toLocaleString()} rows</b> have an ad_type or pod_position value outside the documented set (ad_type: Host-read / Produced, pod_position: Pre / Mid / Post — case-insensitive). These still join fine if au_data has the exact same variant, but any typo or new label here will silently fail to match.</div>`;
+    otherBody += sampleTable(res.nonStandardValues, [{key:'row',label:'row'},{key:'field',label:'field'},{key:'value',label:'value found'},{key:'placement_id',label:'placement_id'},{key:'show_name',label:'show_name'}], 20);
+  }
+  if (res.orphanedAu.length){
+    otherBody += `<div class="note"><b>${res.orphanedAu.length.toLocaleString()} au_data rows</b> never matched any raw row — the AU model has entries for placements/shows/dates the raw export doesn't cover. Worth checking the two exports were pulled for the same date range.</div>`;
+    otherBody += sampleTable(res.orphanedAu, [{key:'mapping_key',label:'mapping_key'},{key:'adelaide_campaign_id',label:'campaign_id'},{key:'avg_au',label:'avg_au'}], 20);
+  }
+  if (res.divideByZero.length){
+    otherBody += `<div class="note"><b>${res.divideByZero.length.toLocaleString()} aggregated groups</b> have zero measurable impressions, so avg_au can't be computed (would divide by zero).</div>`;
+    otherBody += sampleTable(res.divideByZero, [{key:'dedup_key',label:'dedup_key'},{key:'placement_id',label:'placement_id'},{key:'show',label:'show'}], 20);
+  }
+  if (res.zeroImpression.length){
+    otherBody += `<div class="note"><b>${res.zeroImpression.length.toLocaleString()} raw rows</b> have zero or blank impressions.</div>`;
+    otherBody += sampleTable(res.zeroImpression, [{key:'row',label:'row'},{key:'placement_id',label:'placement_id'},{key:'show_name',label:'show_name'},{key:'date',label:'date'}], 20);
+  }
+  html += accordion('Other risks', otherCount, 'Non-standard ad_type/pod_position values, orphaned AU data, divide-by-zero groups, and zero-impression rows.', otherBody, null, null, null);
+
+  html += `<div class="downloads">
+    <button class="dl" id="download-output">Download output_schema.csv — ${res.outputRows.length.toLocaleString()} rows, S3-ready</button>
+  </div>`;
+
+  el.innerHTML = html;
+
+  // wire per-category download buttons
+  el.querySelectorAll('[data-dl]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fname = btn.getAttribute('data-dl');
+      const idx = +btn.getAttribute('data-idx');
+      const dataset = DL_REGISTRY[idx];
+      downloadCSV(fname, dataset.headers, dataset.rows);
+    });
+  });
+
+  document.getElementById('download-output').onclick = () => downloadCSV('output_schema.csv', OUTPUT_HEADERS, res.outputRows);
+}
+
+
+let DL_REGISTRY = [];
+function accordion(title, count, note, bodyHtml, dlFilename, dlRows, dlHeaders){
+  const tone = count === 0 ? '' : (title.includes('Duplicate') ? 'critical' : 'hasissues');
+  let dlBtn = '';
+  if (dlFilename && dlRows && dlRows.length){
+    DL_REGISTRY.push({ headers: dlHeaders, rows: dlRows });
+    dlBtn = `<div class="downloadrow"><button class="link-btn" data-dl="${dlFilename}" data-idx="${DL_REGISTRY.length-1}">Download all ${dlRows.length.toLocaleString()} rows (CSV)</button></div>`;
+  }
+  return `<details class="accordion ${tone}">
+    <summary><span>${title}</span><span class="badge">${count.toLocaleString()}</span></summary>
+    <div class="body">
+      <div class="note">${note}</div>
+      ${bodyHtml || '<div class="empty-note">None found.</div>'}
+      ${dlBtn}
+    </div>
+  </details>`;
+}
+
+document.getElementById('run-btn').addEventListener('click', runReconciliation);
+</script>
+
+
+
+</body></html>
