@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///Users/chriswatts/Downloads/index.html -->
+<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_1.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Podcast ↔ AU Reconciler</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
-<link href="./Podcast ↔ AU Reconciler_files/css2" rel="stylesheet">
-<script src="./Podcast ↔ AU Reconciler_files/papaparse.min.js"></script>
+<link href="./index_files/css2" rel="stylesheet">
+<script src="./index_files/papaparse.min.js"></script>
 <style>
   :root{
     --bg: #F4F5F7;
@@ -196,7 +196,7 @@
       <p class="hint">The <code>podcast_external_file</code>-style export — one row per placement/show/date, with impressions.</p>
       <label class="drop" id="drop-raw">
         <input type="file" id="file-raw" accept=".csv">
-        <div class="cta">Drop CSV here or <b>browse</b></div>
+        <div class="cta">Drop <b>CSV UTF-8</b> here or <b>browse</b></div>
         <div class="filename" id="raw-filename"></div>
         <div class="rowcount" id="raw-rowcount"></div>
       </label>
@@ -206,7 +206,7 @@
       <p class="hint">The <code>au_data</code>-style export — one row per <code>mapping_key</code>, carrying <code>avg_au</code> and <code>adelaide_campaign_id</code>.</p>
       <label class="drop" id="drop-au">
         <input type="file" id="file-au" accept=".csv">
-        <div class="cta">Drop CSV here or <b>browse</b></div>
+        <div class="cta">Drop <b>CSV UTF-8</b> here or <b>browse</b></div>
         <div class="filename" id="au-filename"></div>
         <div class="rowcount" id="au-rowcount"></div>
       </label>
@@ -250,16 +250,27 @@ function wireDrop(dropId, inputId, nameId, countId, onLoaded){
     if (e.dataTransfer.files.length){ input.files = e.dataTransfer.files; handleFile(); }
   });
   input.addEventListener('change', handleFile);
-  function handleFile(){
+  async function handleFile(){
     const f = input.files[0];
     if (!f) return;
     document.getElementById(nameId).textContent = f.name;
+    document.getElementById(countId).textContent = 'Checking file…';
+
+    const binaryCheck = await sniffBinary(f);
+    if (binaryCheck){
+      document.getElementById(countId).innerHTML = `<span style="color:var(--crit);">${binaryCheck}</span>`;
+      return;
+    }
+
     document.getElementById(countId).textContent = 'Parsing…';
     Papa.parse(f, {
       skipEmptyLines: true,
       complete: res => {
         const table = res.data;
-        document.getElementById(countId).textContent = table.length.toLocaleString() + ' rows read';
+        const encodingWarning = detectEncodingIssues(table);
+        let statusHtml = table.length.toLocaleString() + ' rows read';
+        if (encodingWarning) statusHtml += `<br><span style="color:var(--warn);">${encodingWarning}</span>`;
+        document.getElementById(countId).innerHTML = statusHtml;
         onLoaded(table);
         checkReady();
       },
@@ -268,6 +279,38 @@ function wireDrop(dropId, inputId, nameId, countId, onLoaded){
       }
     });
   }
+}
+
+// detect common non-CSV binary formats by file signature, before wasting time parsing garbage
+async function sniffBinary(file){
+  const buf = await file.slice(0, 8).arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  const hex = Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join('');
+  if (hex.startsWith('504b0304') || hex.startsWith('504b0506') || hex.startsWith('504b0708')){
+    return 'This looks like an Excel (.xlsx) or zipped file, not a CSV. Export it as "CSV UTF-8 (Comma delimited)" first.';
+  }
+  if (hex.startsWith('d0cf11e0')){
+    return 'This looks like an old-format Excel (.xls) file, not a CSV. Export it as "CSV UTF-8 (Comma delimited)" first.';
+  }
+  return null;
+}
+
+// flag likely encoding corruption (e.g. a plain "CSV" export instead of "CSV UTF-8") without blocking the parse —
+// same root cause we already found baked into show names in the original workbook
+function detectEncodingIssues(table){
+  const sampleLimit = Math.min(table.length, 300);
+  let hits = 0, cellsChecked = 0;
+  for (let i = 0; i < sampleLimit; i++){
+    for (const cell of table[i]){
+      if (typeof cell !== 'string' || !cell) continue;
+      cellsChecked++;
+      if (cell.indexOf('\uFFFD') !== -1 || /Ã[\u0080-\u00BF]|â€[\u0080-\u009F]/.test(cell)) hits++;
+    }
+  }
+  if (hits > 0 && cellsChecked > 0){
+    return `Possible encoding issue — ${hits} value(s) look corrupted. Try re-exporting as "CSV UTF-8 (Comma delimited)" instead of plain CSV.`;
+  }
+  return null;
 }
 
 function findHeaderRow(table, mustInclude){
