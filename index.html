@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_1.html -->
+<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_3.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,18 +10,20 @@
 <script src="./index_files/papaparse.min.js"></script>
 <style>
   :root{
-    --bg: #F4F5F7;
+    --bg: #F3EFF1;
     --panel: #FFFFFF;
-    --ink: #14181F;
-    --ink-2: #40454E;
-    --muted: #767C87;
-    --line: #E1E4E9;
-    --accent: #1E6F63;
-    --accent-soft: #E4F1EE;
-    --warn: #B4740E;
-    --warn-soft: #FBF0DD;
-    --crit: #A8362A;
-    --crit-soft: #FAE7E4;
+    --ink: #1F1F1F;
+    --ink-2: #4A2E3D;
+    --muted: #8B7183;
+    --line: #E3D6DE;
+    --accent: #461235;
+    --accent-dark: #310E26;
+    --accent-soft: #EDE0E7;
+    --gold: #FFB12F;
+    --warn: #CC3E2B;
+    --warn-soft: #FBE4E0;
+    --crit: #C90435;
+    --crit-soft: #FBE1E7;
     --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     --sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
   }
@@ -31,12 +33,12 @@
     -webkit-font-smoothing:antialiased;
   }
   header.top{
-    background:var(--ink); color:#EEF0F3; padding:28px 32px;
+    background:var(--accent); color:#EEF0F3; padding:28px 32px;
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
   }
   header.top .brand{ display:flex; align-items:baseline; gap:12px; }
   header.top h1{ font-size:19px; margin:0; font-weight:600; letter-spacing:0.01em; }
-  header.top .keymark{ font-family:var(--mono); font-size:12px; color:#8FE0CB; letter-spacing:0.03em; }
+  header.top .keymark{ font-family:var(--mono); font-size:12px; color:var(--gold); letter-spacing:0.03em; }
   header.top p{ margin:4px 0 0; color:#9AA1AC; font-size:13px; max-width:640px; }
   main{ max-width:1040px; margin:0 auto; padding:28px 24px 80px; }
 
@@ -66,12 +68,12 @@
     font-size:14px; font-weight:600; cursor:pointer; font-family:var(--sans);
   }
   button.primary:disabled{ background:#C6CBD2; cursor:not-allowed; }
-  button.primary:not(:disabled):hover{ background:#175A50; }
+  button.primary:not(:disabled):hover{ background:var(--accent-dark); }
   .runstatus{ font-size:13px; color:var(--muted); }
   .runstatus.err{ color:var(--crit); }
 
   .spinner{
-    width:14px; height:14px; border-radius:50%; border:2px solid #C6E3DC; border-top-color:var(--accent);
+    width:14px; height:14px; border-radius:50%; border:2px solid #DCC6D5; border-top-color:var(--accent);
     display:inline-block; vertical-align:middle; margin-right:8px; animation:spin .7s linear infinite;
   }
   @keyframes spin{ to{ transform:rotate(360deg); } }
@@ -87,13 +89,13 @@
   .stat.ok .n{ color:var(--accent); }
 
   .diag{
-    background:var(--warn-soft); border:1px solid #EBD8AE; border-radius:10px; padding:18px 20px; margin-bottom:26px;
+    background:var(--warn-soft); border:1px solid #F0C4BC; border-radius:10px; padding:18px 20px; margin-bottom:26px;
   }
-  .diag h4{ margin:0 0 8px; font-size:13.5px; color:#7A560A; }
-  .diag p{ margin:0 0 12px; font-size:13px; color:#5C4306; line-height:1.55; }
+  .diag h4{ margin:0 0 8px; font-size:13.5px; color:#7A2318; }
+  .diag p{ margin:0 0 12px; font-size:13px; color:#5C1A12; line-height:1.55; }
   .keydiff{ display:grid; grid-template-columns:1fr 1fr; gap:16px; font-family:var(--mono); font-size:12px; }
-  .keydiff .col h5{ font-family:var(--sans); font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#7A560A; margin:0 0 6px;}
-  .keydiff .col div{ background:#fff; border:1px solid #EBD8AE; border-radius:6px; padding:6px 9px; margin-bottom:6px; overflow-wrap:anywhere; }
+  .keydiff .col h5{ font-family:var(--sans); font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#7A2318; margin:0 0 6px;}
+  .keydiff .col div{ background:#fff; border:1px solid #F0C4BC; border-radius:6px; padding:6px 9px; margin-bottom:6px; overflow-wrap:anywhere; }
 
   .accordion{ border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:14px; background:var(--panel); }
   .accordion summary{
@@ -123,11 +125,11 @@
 
   .downloads{ display:flex; gap:12px; margin-top:26px; flex-wrap:wrap; }
   button.dl{
-    background:var(--ink); color:#fff; border:none; border-radius:8px; padding:13px 20px;
+    background:var(--accent); color:#fff; border:none; border-radius:8px; padding:13px 20px;
     font-size:13.5px; font-weight:600; cursor:pointer; font-family:var(--sans);
   }
   button.dl.secondary{ background:#fff; color:var(--ink); border:1px solid var(--line); }
-  button.dl:hover{ opacity:.88; }
+  button.dl:hover{ background:var(--accent-dark); }
 
   .empty-note{ color:var(--muted); font-size:13px; }
 
@@ -147,6 +149,17 @@
   .procref .step a{ color:var(--accent); text-decoration:none; }
   .procref .step a:hover{ text-decoration:underline; }
   .procref .step code{ background:#F1F2F4; border-radius:4px; padding:1px 5px; font-family:var(--mono); font-size:12px; }
+
+  .namecard{ margin-top:16px; }
+  .namefields{ display:flex; gap:16px; flex-wrap:wrap; margin-top:4px; }
+  .namefields .field{ flex:1; min-width:180px; }
+  .namefields label{ font-size:11.5px; color:var(--muted); display:block; margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em; }
+  .namefields input{
+    width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:6px;
+    font-family:var(--sans); font-size:13.5px; box-sizing:border-box; color:var(--ink);
+  }
+  .namefields input:focus{ outline:none; border-color:var(--accent); }
+  .namepreview{ margin-top:12px; font-family:var(--mono); font-size:12.5px; color:var(--accent); word-break:break-all; }
 </style>
 </head>
 <body>
@@ -211,6 +224,22 @@
         <div class="rowcount" id="au-rowcount"></div>
       </label>
     </div>
+  </div>
+
+  <div class="card namecard">
+    <h3>3. Output filename</h3>
+    <p class="hint">Names the downloaded file as <code>[client]_podcast_domain_report_[MMDDYYYY].csv</code> — matches the convention for the omnichannel upload.</p>
+    <div class="namefields">
+      <div class="field">
+        <label for="client-name">Client name</label>
+        <input type="text" id="client-name" placeholder="e.g. Haleon">
+      </div>
+      <div class="field">
+        <label for="report-date">Report date</label>
+        <input type="date" id="report-date">
+      </div>
+    </div>
+    <div class="namepreview" id="name-preview">client_podcast_domain_report_07232026.csv</div>
   </div>
 
   <div class="runbar">
@@ -411,6 +440,38 @@ function downloadCSV(filename, headers, rows){
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
+
+// ---------- output filename ----------
+function todayISO(){
+  const d = new Date();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+function formatDateForFilename(isoDateStr){
+  if (!isoDateStr) return '';
+  const [y,m,d] = isoDateStr.split('-');
+  return `${m}${d}${y}`;
+}
+function sanitizeClientName(raw){
+  const cleaned = (raw || '').trim().replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return cleaned || 'client';
+}
+function buildOutputFilename(){
+  const client = sanitizeClientName(document.getElementById('client-name').value);
+  const dateStr = formatDateForFilename(document.getElementById('report-date').value) || formatDateForFilename(todayISO());
+  return `${client}_podcast_domain_report_${dateStr}.csv`;
+}
+function updateNamePreview(){
+  const filename = buildOutputFilename();
+  document.getElementById('name-preview').textContent = filename;
+  const dlBtn = document.getElementById('download-output');
+  if (dlBtn) dlBtn.textContent = 'Download ' + filename;
+}
+document.getElementById('report-date').value = todayISO();
+document.getElementById('client-name').addEventListener('input', updateNamePreview);
+document.getElementById('report-date').addEventListener('input', updateNamePreview);
+updateNamePreview();
 
 // ---------- core reconciliation ----------
 function runReconciliation(){
@@ -726,7 +787,7 @@ function renderResults(res){
   html += accordion('Other risks', otherCount, 'Non-standard ad_type/pod_position values, orphaned AU data, divide-by-zero groups, and zero-impression rows.', otherBody, null, null, null);
 
   html += `<div class="downloads">
-    <button class="dl" id="download-output">Download output_schema.csv — ${res.outputRows.length.toLocaleString()} rows, S3-ready</button>
+    <button class="dl" id="download-output">Download ${buildOutputFilename()}</button>
   </div>`;
 
   el.innerHTML = html;
@@ -741,7 +802,7 @@ function renderResults(res){
     });
   });
 
-  document.getElementById('download-output').onclick = () => downloadCSV('output_schema.csv', OUTPUT_HEADERS, res.outputRows);
+  document.getElementById('download-output').onclick = () => downloadCSV(buildOutputFilename(), OUTPUT_HEADERS, res.outputRows);
 }
 
 
