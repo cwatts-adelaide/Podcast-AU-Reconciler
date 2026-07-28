@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_5.html -->
+<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_6.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -141,6 +141,16 @@ License: MIT
 
   .empty-note{ color:var(--muted); font-size:13px; }
 
+  .new-report-btn{
+    position:fixed; bottom:24px; right:24px; z-index:50;
+    background:var(--accent); color:#fff; border:none; border-radius:999px;
+    padding:13px 22px; font-size:13.5px; font-weight:600; cursor:pointer;
+    font-family:var(--sans); box-shadow:0 4px 16px rgba(70,18,53,0.32);
+    display:flex; align-items:center; gap:8px; transition:background .15s, transform .15s;
+  }
+  .new-report-btn:hover{ background:var(--accent-dark); transform:translateY(-1px); }
+  .new-report-btn svg{ width:15px; height:15px; }
+
   .procref{ background:var(--panel); border:1px solid var(--line); border-radius:10px; margin-bottom:22px; overflow:hidden; }
   .procref summary{
     list-style:none; cursor:pointer; padding:14px 20px; font-size:13.5px; font-weight:600;
@@ -257,6 +267,11 @@ License: MIT
 
   <div id="results" style="display:none;"></div>
 </main>
+
+<button class="new-report-btn" id="new-report-btn" title="Clear everything and start a new report">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
+  New report
+</button>
 
 <script>
 // ---------- column contracts ----------
@@ -847,6 +862,7 @@ function accordion(title, count, note, bodyHtml, dlFilename, dlRows, dlHeaders){
 }
 
 document.getElementById('run-btn').addEventListener('click', runReconciliation);
+document.getElementById('new-report-btn').addEventListener('click', () => location.reload());
 </script>
 
 
