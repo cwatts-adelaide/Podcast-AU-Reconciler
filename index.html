@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_6.html -->
+<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_7.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -257,7 +257,7 @@ License: MIT
         <input type="date" id="report-date">
       </div>
     </div>
-    <div class="namepreview" id="name-preview">client_podcast_domain_report_07282026.csv</div>
+    <div class="namepreview" id="name-preview">client_podcast_domain_report_07292026.csv</div>
   </div>
 
   <div class="runbar">
@@ -459,8 +459,8 @@ function toCSV(headers, rows){
   return lines.join('\n');
 }
 function downloadCSV(filename, headers, rows){
-  const csv = toCSV(headers, rows);
-  const blob = new Blob([csv], { type: 'text/csv' });
+  const csv = '\uFEFF' + toCSV(headers, rows);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename;
@@ -647,7 +647,7 @@ function reconcile(raw, au){
     if (!g.anyMatched){
       avgAuAgg = '';
     } else if (auMeasurable > 0){
-      avgAuAgg = g.sumTotalAu / auMeasurable;
+      avgAuAgg = (g.sumTotalAu / auMeasurable).toFixed(8);
     } else {
       divideByZero.push({ dedup_key: dedupKey, placement_id: g.placementId, show: g.showName, ad_type: g.adType, pod_position: g.podPosition });
     }
@@ -674,7 +674,7 @@ function reconcile(raw, au){
       tracked_impressions: g.sumImpressions,
       loaded_impressions: g.sumImpressions,
       au_measurable_impressions: g.sumImpressions,
-      total_au: g.sumTotalAu,
+      total_au: g.sumTotalAu.toFixed(2),
       avg_au: avgAuAgg,
       onscreen_impressions: '', onscreen_50p_impressions: '', coverage_value: '', clutter_value: '',
       x_position_value: '', tos_time_0_300cap: '', video_q4_count: '', cost: '', cpm: '',
