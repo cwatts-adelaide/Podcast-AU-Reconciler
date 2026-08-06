@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_7.html -->
+<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_8.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -257,7 +257,7 @@ License: MIT
         <input type="date" id="report-date">
       </div>
     </div>
-    <div class="namepreview" id="name-preview">client_podcast_domain_report_07292026.csv</div>
+    <div class="namepreview" id="name-preview">client_podcast_domain_report_08062026.csv</div>
   </div>
 
   <div class="runbar">
@@ -451,6 +451,15 @@ function csvEscape(v){
   if (/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
   return v;
 }
+// The domain_report ingestion pipeline splits on raw commas regardless of CSV quoting,
+// so a comma-containing value (common in messy placement/show names) breaks it even though
+// it's valid CSV. Strip commas from output values rather than relying on quoting to protect them.
+function sanitizeForIngestion(v){
+  if (v === null || v === undefined || v === '') return v;
+  const str = String(v);
+  if (str.indexOf(',') === -1) return v;
+  return str.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+}
 function toCSV(headers, rows){
   const lines = [headers.join(',')];
   for (const row of rows){
@@ -639,6 +648,7 @@ function reconcile(raw, au){
   const outputRows = [];
   const dedupIndex = new Map(); // dedupKey -> [group summaries]
   const divideByZero = [];
+  const commaFixed = []; // fields where a comma was stripped for ingestion safety
 
   for (const g of groups.values()){
     const dedupKey = `${g.campaignId}${g.serial === null ? '' : g.serial}${g.placementId}`;
@@ -680,6 +690,16 @@ function reconcile(raw, au){
       x_position_value: '', tos_time_0_300cap: '', video_q4_count: '', cost: '', cpm: '',
       throttled_impressions: '', tpa_score: ''
     };
+
+    for (const field of Object.keys(outRow)){
+      const original = outRow[field];
+      const cleaned = sanitizeForIngestion(original);
+      if (cleaned !== original){
+        commaFixed.push({ dedup_key: dedupKey, field, original: String(original), cleaned: String(cleaned) });
+        outRow[field] = cleaned;
+      }
+    }
+
     outputRows.push(outRow);
 
     if (!dedupIndex.has(dedupKey)) dedupIndex.set(dedupKey, []);
@@ -706,6 +726,7 @@ function reconcile(raw, au){
     orphanedAu,
     duplicateDedupKeys,
     divideByZero,
+    commaFixed,
     outputRows,
     sampleKeys,
     auSampleKeys: auSampleKeysOriginal,
@@ -803,8 +824,12 @@ function renderResults(res){
     ['dedup_key','collisions','detail']
   );
 
-  const otherCount = res.orphanedAu.length + res.divideByZero.length + res.zeroImpression.length + res.nonStandardValues.length;
+  const otherCount = res.orphanedAu.length + res.divideByZero.length + res.zeroImpression.length + res.nonStandardValues.length + res.commaFixed.length;
   let otherBody = '';
+  if (res.commaFixed.length){
+    otherBody += `<div class="note"><b>${res.commaFixed.length.toLocaleString()} value(s)</b> contained a comma, which the domain_report ingestion pipeline can't handle even when properly CSV-quoted — commas were replaced with a space in the downloaded file so it ships ingestion-safe. Check these read correctly.</div>`;
+    otherBody += sampleTable(res.commaFixed, [{key:'dedup_key',label:'dedup_key'},{key:'field',label:'field'},{key:'original',label:'original value'},{key:'cleaned',label:'cleaned value'}], 20);
+  }
   if (res.nonStandardValues.length){
     otherBody += `<div class="note"><b>${res.nonStandardValues.length.toLocaleString()} rows</b> have an ad_type or pod_position value outside the documented set (ad_type: Host-read / Produced, pod_position: Pre / Mid / Post — case-insensitive). These still join fine if au_data has the exact same variant, but any typo or new label here will silently fail to match.</div>`;
     otherBody += sampleTable(res.nonStandardValues, [{key:'row',label:'row'},{key:'field',label:'field'},{key:'value',label:'value found'},{key:'placement_id',label:'placement_id'},{key:'show_name',label:'show_name'}], 20);
@@ -821,7 +846,7 @@ function renderResults(res){
     otherBody += `<div class="note"><b>${res.zeroImpression.length.toLocaleString()} raw rows</b> have zero or blank impressions.</div>`;
     otherBody += sampleTable(res.zeroImpression, [{key:'row',label:'row'},{key:'placement_id',label:'placement_id'},{key:'show_name',label:'show_name'},{key:'date',label:'date'}], 20);
   }
-  html += accordion('Other risks', otherCount, 'Non-standard ad_type/pod_position values, orphaned AU data, divide-by-zero groups, and zero-impression rows.', otherBody, null, null, null);
+  html += accordion('Other risks', otherCount, 'Comma sanitization, non-standard ad_type/pod_position values, orphaned AU data, divide-by-zero groups, and zero-impression rows.', otherBody, null, null, null);
 
   html += `<div class="downloads">
     <button class="dl" id="download-output">Download ${buildOutputFilename()}</button>
