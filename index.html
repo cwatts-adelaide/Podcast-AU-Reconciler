@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_8.html -->
+<!-- saved from url=(0047)file:///Users/chriswatts/Downloads/index_9.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -369,17 +369,20 @@ function detectEncodingIssues(table){
   return null;
 }
 
+function cleanCell(v){
+  return (v || '').toString().replace(/^\uFEFF/, '').trim();
+}
 function findHeaderRow(table, mustInclude){
   const limit = Math.min(table.length, 15);
   for (let i = 0; i < limit; i++){
-    const row = table[i].map(c => (c || '').toString().trim());
+    const row = table[i].map(cleanCell);
     if (mustInclude.every(name => row.includes(name))) return i;
   }
   return -1;
 }
 
 function tableToObjects(table, headerRowIdx){
-  const headers = table[headerRowIdx].map(h => (h || '').toString().trim());
+  const headers = table[headerRowIdx].map(cleanCell);
   const out = [];
   for (let i = headerRowIdx + 1; i < table.length; i++){
     const r = table[i];
